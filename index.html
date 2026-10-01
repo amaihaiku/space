@@ -8,12 +8,16 @@
   <!-- PWA & Mobile Web App Meta Tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="SpaceInvadersHand">
+  <meta name="apple-mobile-web-app-title" content="InvadersAI">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#030712">
 
-  <!-- Inline Web App Manifest for PWA Home Screen Installation -->
-  <link rel="manifest" href='data:application/manifest+json,{"name":"Space Invaders Hand AI","short_name":"InvadersAI","start_url":".","display":"standalone","orientation":"portrait","background_color":"#030712","theme_color":"#030712"}'>
+  <!-- Crisp Retro Space Invader SVG App Icon & Apple Touch Icon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' width='192' height='192'%3E%3Crect width='16' height='16' fill='%23030712'/%3E%3Cpath fill='%2322c55e' d='M5 2h6v1H5zm-2 2h10v1H3zm-1 2h12v1H2zm0 2h3v1H2zm9 0h3v1h-3zm-9 2h2v1H2zm10 0h2v1h-2zm-8 2h1v2H4zm7 0h1v2h-1z'/%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' width='192' height='192'%3E%3Crect width='16' height='16' fill='%23030712'/%3E%3Cpath fill='%2322c55e' d='M5 2h6v1H5zm-2 2h10v1H3zm-1 2h12v1H2zm0 2h3v1H2zm9 0h3v1h-3zm-9 2h2v1H2zm10 0h2v1h-2zm-8 2h1v2H4zm7 0h1v2h-1z'/%3E%3C/svg%3E">
+
+  <!-- Inline Web App Manifest with Icon for PWA Installation -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"Space Invaders Hand AI","short_name":"InvadersAI","start_url":".","display":"standalone","orientation":"portrait","background_color":"#030712","theme_color":"#030712","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 fill=%22%23030712%22/%3E%3Cpath fill=%22%2322c55e%22 d=%22M5 2h6v1H5zm-2 2h10v1H3zm-1 2h12v1H2zm0 2h3v1H2zm9 0h3v1h-3zm-9 2h2v1H2zm10 0h2v1h-2zm-8 2h1v2H4zm7 0h1v2h-1z%22/%3E%3C/svg%3E","sizes":"192x192 512x512","type":"image/svg+xml","purpose":"any maskable"}]}'>
 
   <!-- Retro Pixel Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -372,6 +376,11 @@
       <button class="btn-arcade" id="btn-start-game">
         ▶ JÁTÉK INDÍTÁSA
       </button>
+
+      <!-- PWA Install Prompt Button (Shown when eligible) -->
+      <button class="btn-arcade" id="btn-install-pwa" style="display: none; background: #38bdf8; box-shadow: 0 6px 0 #0284c7, 0 0 15px rgba(56, 189, 248, 0.4); font-size: 10px; padding: 12px 18px; margin-top: -6px;">
+        📲 ALKALMAZÁS TELEPÍTÉSE
+      </button>
     </div>
 
     <!-- Game Over / Stage Cleared Overlay -->
@@ -571,6 +580,18 @@
     let invaderMoveTimer = 0;
     let invaderMoveInterval = 55; // Frames between invader steps, drops as they die
 
+    // Offscreen Sprite & Bunker caches to replace thousands of costly fillRect / shadowBlur calls
+    const SPRITE_CACHE = {};
+    let isSpritesCached = false;
+
+    // Lightweight 160x120 downscaled canvas for superfast mobile neural network inference
+    const aiCanvas = document.createElement('canvas');
+    aiCanvas.width = 160;
+    aiCanvas.height = 120;
+    const aiCtx = aiCanvas.getContext('2d', { willReadFrequently: true });
+    let lastInferenceTime = 0;
+    const INFERENCE_MIN_INTERVAL = 38; // ~26 FPS hand inference keeps mobile CPU cool while game runs at 60 FPS!
+
     // 1-bit pixel maps (8x8 and 11x8)
     const SPRITES = {
       // Squid (Top row, 30pts)
@@ -665,15 +686,39 @@
       ]
     };
 
-    function drawPixelMatrix(matrix, startX, startY, pixelSize, color) {
-      ctx.fillStyle = color;
+    function cacheSingleSprite(matrix, pixelSize, color) {
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = matrix[0].length * pixelSize;
+      offCanvas.height = matrix.length * pixelSize;
+      const offCtx = offCanvas.getContext('2d');
+      offCtx.fillStyle = color;
       for (let r = 0; r < matrix.length; r++) {
         for (let c = 0; c < matrix[r].length; c++) {
           if (matrix[r][c] === '1') {
-            ctx.fillRect(startX + c * pixelSize, startY + r * pixelSize, pixelSize, pixelSize);
+            offCtx.fillRect(c * pixelSize, r * pixelSize, pixelSize, pixelSize);
           }
         }
       }
+      return offCanvas;
+    }
+
+    function initSpriteCaches() {
+      if (isSpritesCached) return;
+      SPRITE_CACHE.squid = [
+        cacheSingleSprite(SPRITES.squid[0], 2.4, '#ec4899'),
+        cacheSingleSprite(SPRITES.squid[1], 2.4, '#ec4899')
+      ];
+      SPRITE_CACHE.crab = [
+        cacheSingleSprite(SPRITES.crab[0], 2.4, '#38bdf8'),
+        cacheSingleSprite(SPRITES.crab[1], 2.4, '#38bdf8')
+      ];
+      SPRITE_CACHE.octopus = [
+        cacheSingleSprite(SPRITES.octopus[0], 2.4, '#22c55e'),
+        cacheSingleSprite(SPRITES.octopus[1], 2.4, '#22c55e')
+      ];
+      SPRITE_CACHE.player = cacheSingleSprite(SPRITES.player, 3, '#22c55e');
+      SPRITE_CACHE.ufo = cacheSingleSprite(SPRITES.ufo, 3, '#ef4444');
+      isSpritesCached = true;
     }
 
     function initBunkers() {
@@ -687,27 +732,33 @@
         const bx = spacing * (i + 1) - bWidth / 2;
         const by = H - 140;
 
-        // Build a grid of destructible 4x4 blocks
         const rows = 8;
         const cols = 12;
         const blockSize = 4.2;
         const grid = [];
 
+        // Offscreen bunker canvas for instant single-draw blitting
+        const bCanvas = document.createElement('canvas');
+        bCanvas.width = Math.ceil(cols * blockSize);
+        bCanvas.height = Math.ceil(rows * blockSize);
+        const bCtx = bCanvas.getContext('2d');
+        bCtx.fillStyle = '#22c55e';
+
         for (let r = 0; r < rows; r++) {
           grid[r] = [];
           for (let c = 0; c < cols; c++) {
-            // Cut archway at bottom center
             if (r > 4 && c >= 4 && c <= 7) {
               grid[r][c] = false;
             } else if (r === 0 && (c < 2 || c > 9)) {
-              grid[r][c] = false; // Rounded top shoulders
+              grid[r][c] = false;
             } else {
               grid[r][c] = true;
+              bCtx.fillRect(c * blockSize, r * blockSize, blockSize - 0.4, blockSize - 0.4);
             }
           }
         }
 
-        bunkers.push({ x: bx, y: by, blockSize, rows, cols, grid });
+        bunkers.push({ x: bx, y: by, blockSize, rows, cols, grid, canvas: bCanvas, ctx: bCtx });
       }
     }
 
@@ -866,16 +917,26 @@
 
     let isProcessingFrame = false;
     async function predictVideoLoop() {
-      if (isWebcamReady && handsDetector && video.readyState >= 2 && !video.paused) {
-        if (!isProcessingFrame) {
-          isProcessingFrame = true;
-          try {
-            await handsDetector.send({ image: video });
-          } catch (e) {
-            console.warn(e);
-          }
-          isProcessingFrame = false;
+      const now = performance.now();
+      // Throttle AI hand predictions: avoids thermal throttling & keeps 60 FPS display loop fluid
+      if (
+        isWebcamReady &&
+        handsDetector &&
+        video.readyState >= 2 &&
+        !video.paused &&
+        !isProcessingFrame &&
+        (now - lastInferenceTime >= INFERENCE_MIN_INTERVAL)
+      ) {
+        isProcessingFrame = true;
+        lastInferenceTime = now;
+        try {
+          // Draw video into downscaled 160x120 canvas to drastically decrease neural input workload
+          aiCtx.drawImage(video, 0, 0, aiCanvas.width, aiCanvas.height);
+          await handsDetector.send({ image: aiCanvas });
+        } catch (e) {
+          console.warn(e);
         }
+        isProcessingFrame = false;
       }
 
       if (isWebcamReady) {
@@ -921,11 +982,19 @@
           if (r >= 0 && r < bunker.rows && c >= 0 && c < bunker.cols) {
             if (bunker.grid[r][c]) {
               // Destroy hit block and neighbors for realistic chip damage
-              bunker.grid[r][c] = false;
-              if (r > 0) bunker.grid[r - 1][c] = false;
-              if (r < bunker.rows - 1) bunker.grid[r + 1][c] = false;
-              if (c > 0) bunker.grid[r][c - 1] = false;
-              if (c < bunker.cols - 1) bunker.grid[r][c + 1] = false;
+              const eraseBlock = (row, col) => {
+                if (row >= 0 && row < bunker.rows && col >= 0 && col < bunker.cols && bunker.grid[row][col]) {
+                  bunker.grid[row][col] = false;
+                  // Erase directly on the bunker offscreen canvas
+                  bunker.ctx.clearRect(col * bunker.blockSize - 0.5, row * bunker.blockSize - 0.5, bunker.blockSize + 1, bunker.blockSize + 1);
+                }
+              };
+
+              eraseBlock(r, c);
+              eraseBlock(r - 1, c);
+              eraseBlock(r + 1, c);
+              eraseBlock(r, c - 1);
+              eraseBlock(r, c + 1);
 
               spawnParticles(bullet.x, bullet.y, '#22c55e', 4);
               return true; // Hit registered
@@ -1202,60 +1271,46 @@
         ctx.fillRect(sx, sy, 1.5, 1.5);
       }
 
-      // Draw Mystery UFO
-      if (ufo && ufo.alive) {
-        drawPixelMatrix(SPRITES.ufo, ufo.x - 21, ufo.y - 10, 3, '#ef4444');
+      // Draw Mystery UFO via cached bitmap
+      if (ufo && ufo.alive && SPRITE_CACHE.ufo) {
+        ctx.drawImage(SPRITE_CACHE.ufo, ufo.x - 21, ufo.y - 10);
       }
 
-      // Draw Invaders
+      // Draw Invaders via pre-rendered bitmaps (1 blit per invader instead of hundreds of fillRects)
       invaders.forEach(inv => {
         if (!inv.alive) return;
-        const spriteFrames = SPRITES[inv.type];
-        const frameData = spriteFrames[inv.frame % 2];
-        const pSize = 2.4;
-        const startX = inv.x - (frameData[0].length * pSize) / 2;
-        const startY = inv.y - (frameData.length * pSize) / 2;
-        drawPixelMatrix(frameData, startX, startY, pSize, inv.color);
+        const cached = SPRITE_CACHE[inv.type];
+        if (cached) {
+          const img = cached[inv.frame % 2];
+          ctx.drawImage(img, inv.x - img.width / 2, inv.y - img.height / 2);
+        }
       });
 
-      // Draw Bunkers
+      // Draw Bunkers via pre-baked offscreen canvas (only 3 fast drawImage calls per frame!)
       bunkers.forEach(b => {
-        ctx.fillStyle = '#22c55e';
-        for (let r = 0; r < b.rows; r++) {
-          for (let c = 0; c < b.cols; c++) {
-            if (b.grid[r][c]) {
-              ctx.fillRect(b.x + c * b.blockSize, b.y + r * b.blockSize, b.blockSize - 0.4, b.blockSize - 0.4);
-            }
-          }
-        }
+        ctx.drawImage(b.canvas, b.x, b.y);
       });
 
       // Draw Player Ship (flashes if invulnerable)
       if (player.invulnerableTimer === 0 || Math.floor(player.invulnerableTimer / 4) % 2 === 0) {
-        const pSprite = SPRITES.player;
-        const pSize = 3;
-        const sx = player.x - (pSprite[0].length * pSize) / 2;
-        const sy = player.y - (pSprite.length * pSize) / 2;
-        drawPixelMatrix(pSprite, sx, sy, pSize, '#22c55e');
+        if (SPRITE_CACHE.player) {
+          ctx.drawImage(SPRITE_CACHE.player, player.x - SPRITE_CACHE.player.width / 2, player.y - SPRITE_CACHE.player.height / 2);
+        }
       }
 
-      // Draw Player Laser
+      // Draw Player Laser (Crisp high-contrast neon without costly GPU shadowBlur)
       if (playerLaser) {
-        ctx.fillStyle = '#f8fafc';
-        ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 8;
-        ctx.fillRect(playerLaser.x - playerLaser.width / 2, playerLaser.y, playerLaser.width, playerLaser.height);
-        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(playerLaser.x - 2, playerLaser.y, 4, playerLaser.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(playerLaser.x - 1, playerLaser.y + 1, 2, playerLaser.height - 2);
       }
 
       // Draw Invader Bombs
       ctx.fillStyle = '#f43f5e';
-      ctx.shadowColor = '#f43f5e';
-      ctx.shadowBlur = 6;
       invaderBombs.forEach(b => {
         ctx.fillRect(b.x - b.width / 2, b.y, b.width, b.height);
       });
-      ctx.shadowBlur = 0;
 
       // Draw Particles
       particles.forEach(p => {
@@ -1357,7 +1412,56 @@
       isTouching = false;
     });
 
+    // Request full screen on mobile devices upon user interaction
+    function enterFullScreen() {
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen().catch(() => {});
+      } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen();
+      }
+    }
+
+    // PWA Install Prompt Support
+    let deferredPrompt = null;
+    const btnInstallPwa = document.getElementById('btn-install-pwa');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (btnInstallPwa) {
+        btnInstallPwa.style.display = 'block';
+      }
+    });
+
+    if (btnInstallPwa) {
+      btnInstallPwa.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            btnInstallPwa.style.display = 'none';
+          }
+          deferredPrompt = null;
+        }
+      });
+    }
+
+    // Inline Service Worker Registration for PWA Installability criteria
+    if ('serviceWorker' in navigator) {
+      const swScript = `
+        self.addEventListener('install', (e) => self.skipWaiting());
+        self.addEventListener('activate', (e) => self.clients.claim());
+        self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
+      `;
+      try {
+        const swBlob = new Blob([swScript], { type: 'application/javascript' });
+        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+      } catch (e) {}
+    }
+
     document.getElementById('btn-start-game').addEventListener('click', async () => {
+      enterFullScreen();
       startOverlay.classList.add('hidden');
       soundFX.init();
       await startCamera();
@@ -1368,12 +1472,14 @@
       lives = 3;
       renderLives();
       updateHUD();
+      initSpriteCaches();
       initBunkers();
       initInvaderWave(currentWave);
       currentState = GAME_STATE.PLAYING;
     });
 
     document.getElementById('btn-restart-game').addEventListener('click', () => {
+      enterFullScreen();
       gameoverOverlay.classList.add('hidden');
       score = 0;
       currentWave = 1;
@@ -1387,6 +1493,7 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       checkPhoneLandscape();
+      initSpriteCaches();
       resizeCanvas();
       renderLives();
       updateHUD();
