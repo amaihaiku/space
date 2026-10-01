@@ -584,14 +584,26 @@
     const SPRITE_CACHE = {};
     let isSpritesCached = false;
 
-    // Ultra-lightweight 110x85 downscaled canvas for mobile neural network inference
+    // Device detection helpers: strictly distinguishes mobile phones from PCs and tablets
+    function isMobilePhone() {
+      const ua = navigator.userAgent || '';
+      const isMobileUA = /Android.*Mobile|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+      const minDim = Math.min(window.screen.width || 0, window.screen.height || 0);
+      const isSmallScreen = minDim > 0 && minDim < 550;
+      const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      const hasFinePointer = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+
+      return isMobileUA || (isTouch && isSmallScreen && !hasFinePointer);
+    }
+
+    function isPortraitPhone() {
+      return isMobilePhone() && window.innerHeight >= window.innerWidth;
+    }
+
+    // Dynamic offscreen canvas for neural network inference (compact on phones, full precision on PC/tablet)
     const aiCanvas = document.createElement('canvas');
-    aiCanvas.width = 110;
-    aiCanvas.height = 85;
     const aiCtx = aiCanvas.getContext('2d', { willReadFrequently: true });
     let lastInferenceTime = 0;
-    // ~11 FPS hand inference (90ms interval): leaves 85% of mobile CPU free for 60 FPS fluid rendering!
-    const INFERENCE_MIN_INTERVAL = 90;
 
     // 1-bit pixel maps (8x8 and 11x8)
     const SPRITES = {
@@ -835,16 +847,17 @@
     function initMediaPipe() {
       if (handsDetector) return;
 
+      const isPhone = isMobilePhone();
       try {
         handsDetector = new Hands({
           locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
         });
 
         handsDetector.setOptions({
-          maxNumHands: 1, // Only 1 hand for minimal mobile overhead
-          modelComplexity: 0, // 0 = Lightest mobile neural weights
-          minDetectionConfidence: 0.4, // Lower threshold avoids redundant recalculations
-          minTrackingConfidence: 0.4
+          maxNumHands: 1,
+          modelComplexity: isPhone ? 0 : 1, // Phone: 0 (lightweight), PC/Tablet: 1 (sharp precision)
+          minDetectionConfidence: isPhone ? 0.4 : 0.5,
+          minTrackingConfidence: isPhone ? 0.4 : 0.5
         });
 
         handsDetector.onResults(onHandResults);
@@ -889,14 +902,28 @@
         return;
       }
 
+      const isPhone = isMobilePhone();
+
+      // Configure AI canvas resolution: smaller on mobile phones, sharper on PC/tablet
+      aiCanvas.width = isPhone ? 110 : 320;
+      aiCanvas.height = isPhone ? 85 : 240;
+
+      // Camera constraints: battery-saving on phones, high-fps on PC and tablets
+      const videoConstraints = isPhone ? {
+        facingMode: 'user',
+        width: { ideal: 240, max: 320 },
+        height: { ideal: 180, max: 240 },
+        frameRate: { ideal: 20, max: 30 }
+      } : {
+        facingMode: 'user',
+        width: { ideal: 640, max: 1280 },
+        height: { ideal: 480, max: 720 },
+        frameRate: { ideal: 30, max: 60 }
+      };
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'user', // Front selfie camera
-            width: { ideal: 240, max: 320 },
-            height: { ideal: 180, max: 240 },
-            frameRate: { ideal: 20, max: 30 }
-          },
+          video: videoConstraints,
           audio: false
         });
 
@@ -917,19 +944,21 @@
     let isProcessingFrame = false;
     async function predictVideoLoop() {
       const now = performance.now();
-      // Throttle AI hand predictions: avoids thermal throttling & keeps 60 FPS display loop fluid
+      // Mobile phones throttle to ~11 FPS (90ms) to save CPU & avoid heat.
+      // PC & Tablets run unthrottled (16ms / every frame) for instantaneous 60 FPS hand tracking!
+      const minInterval = isMobilePhone() ? 90 : 16;
+
       if (
         isWebcamReady &&
         handsDetector &&
         video.readyState >= 2 &&
         !video.paused &&
         !isProcessingFrame &&
-        (now - lastInferenceTime >= INFERENCE_MIN_INTERVAL)
+        (now - lastInferenceTime >= minInterval)
       ) {
         isProcessingFrame = true;
         lastInferenceTime = now;
         try {
-          // Draw video into downscaled 160x120 canvas to drastically decrease neural input workload
           aiCtx.drawImage(video, 0, 0, aiCanvas.width, aiCanvas.height);
           await handsDetector.send({ image: aiCanvas });
         } catch (e) {
@@ -1008,10 +1037,11 @@
       if (currentState !== GAME_STATE.PLAYING) return;
 
       // 1. Smoothly map player position from detected index finger X
-      // 0.16 lerp factor creates buttery smooth sliding motion between the 90ms AI samples
+      // Phones use 0.16 lerp to smooth the 90ms intervals; PC/tablet uses 0.35 for instant real-time response
       if (handDetected) {
         const targetX = rawNormalizedX * W;
-        player.x += (targetX - player.x) * 0.16;
+        const lerpFactor = isMobilePhone() ? 0.16 : 0.35;
+        player.x += (targetX - player.x) * lerpFactor;
       }
 
       // Keep ship on screen
@@ -1349,15 +1379,7 @@
 
     // Intelligent device detector: Only phones are locked to portrait
     function checkPhoneLandscape() {
-      const ua = navigator.userAgent || '';
-      // Mobile phone detection (excluding tablets like iPad / Android tablet)
-      const isMobileUA = /Android.*Mobile|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-      const minDim = Math.min(window.screen.width || 0, window.screen.height || 0);
-      // Smartphone physical portrait width is < 550px, whereas tablets (iPad mini, Galaxy Tab) are >= 600px
-      const isSmallScreen = minDim > 0 && minDim < 550;
-      const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
-      const isPhone = isMobileUA || (isTouch && isSmallScreen && !window.matchMedia('(pointer: fine)').matches);
+      const isPhone = isMobilePhone();
       const isLandscape = window.innerWidth > window.innerHeight;
 
       const warningEl = document.getElementById('landscape-warning');
@@ -1372,12 +1394,14 @@
 
     window.addEventListener('resize', () => {
       checkPhoneLandscape();
+      checkPWAButtonVisibility();
       resizeCanvas();
     });
 
     window.addEventListener('orientationchange', () => {
       setTimeout(() => {
         checkPhoneLandscape();
+        checkPWAButtonVisibility();
         resizeCanvas();
       }, 150);
     });
@@ -1386,6 +1410,7 @@
       window.screen.orientation.addEventListener('change', () => {
         setTimeout(() => {
           checkPhoneLandscape();
+          checkPWAButtonVisibility();
           resizeCanvas();
         }, 150);
       });
@@ -1411,8 +1436,10 @@
       isTouching = false;
     });
 
-    // Request full screen on mobile devices upon user interaction
+    // Request full screen: STRICTLY on portrait mobile phones, NEVER on PC or tablets!
     function enterFullScreen() {
+      if (!isPortraitPhone()) return;
+
       const docEl = document.documentElement;
       if (docEl.requestFullscreen) {
         docEl.requestFullscreen().catch(() => {});
@@ -1421,14 +1448,29 @@
       }
     }
 
-    // PWA Install Prompt Support
+    // PWA Install Prompt Support: Strictly only on mobile phones!
     let deferredPrompt = null;
     const btnInstallPwa = document.getElementById('btn-install-pwa');
+
+    function checkPWAButtonVisibility() {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      if (btnInstallPwa) {
+        // Hide unconditionally on desktop PC and tablets
+        if (!isMobilePhone() || isStandalone) {
+          btnInstallPwa.style.display = 'none';
+        } else if (/iPhone|iPod/.test(navigator.userAgent) && !deferredPrompt) {
+          // On iOS phones, show helpful add-to-homescreen guidance
+          btnInstallPwa.style.display = 'block';
+        }
+      }
+    }
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
-      if (btnInstallPwa) {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      // Show ONLY if the user is on a mobile phone and not already installed
+      if (btnInstallPwa && isMobilePhone() && !isStandalone) {
         btnInstallPwa.style.display = 'block';
       }
     });
@@ -1442,6 +1484,14 @@
             btnInstallPwa.style.display = 'none';
           }
           deferredPrompt = null;
+        } else if (/iPhone|iPod/.test(navigator.userAgent)) {
+          // iOS Safari instructions
+          btnInstallPwa.textContent = "Koppints a ⎋ Megosztás -> Főképernyőre!";
+          btnInstallPwa.style.fontSize = "8px";
+          setTimeout(() => {
+            btnInstallPwa.textContent = "📲 ALKALMAZÁS TELEPÍTÉSE";
+            btnInstallPwa.style.fontSize = "10px";
+          }, 4000);
         }
       });
     }
@@ -1484,6 +1534,7 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       checkPhoneLandscape();
+      checkPWAButtonVisibility();
       initSpriteCaches();
       resizeCanvas();
       renderLives();
