@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Space Invaders - Kézvezérlés PWA</title>
 
+  <!-- Böngésző gyorsítótár felülírás: azonnali verziófrissülés az index.html feltöltésekor -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
   <!-- PWA & Mobile Web App Meta Tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1484,21 +1489,21 @@
             btnInstallPwa.style.display = 'none';
           }
           deferredPrompt = null;
-        } else if (/iPhone|iPod/.test(navigator.userAgent)) {
-          // iOS Safari instructions
-          btnInstallPwa.textContent = "Koppints a ⎋ Megosztás -> Főképernyőre!";
-          btnInstallPwa.style.fontSize = "8px";
-          setTimeout(() => {
-            btnInstallPwa.textContent = "📲 ALKALMAZÁS TELEPÍTÉSE";
-            btnInstallPwa.style.fontSize = "10px";
-          }, 4000);
+    // Register sw.js for installed PWA caching with automatic update polling
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then((registration) => {
+        // Azonnal ellenőrzi a szervert, érkezett-e új verzió
+        registration.update();
+      }).catch(() => {});
+
+      // Amint egy új sw.js aktiválódik a szerveren, automatikusan újratölti az oldalt
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
         }
       });
-    }
-
-    // Register sw.js for installed PWA caching
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
     }
 
     document.getElementById('btn-start-game').addEventListener('click', async () => {
