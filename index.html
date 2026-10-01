@@ -21,8 +21,8 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' width='192' height='192'%3E%3Crect width='16' height='16' fill='%23030712'/%3E%3Cpath fill='%2322c55e' d='M5 2h6v1H5zm-2 2h10v1H3zm-1 2h12v1H2zm0 2h3v1H2zm9 0h3v1h-3zm-9 2h2v1H2zm10 0h2v1h-2zm-8 2h1v2H4zm7 0h1v2h-1z'/%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' width='192' height='192'%3E%3Crect width='16' height='16' fill='%23030712'/%3E%3Cpath fill='%2322c55e' d='M5 2h6v1H5zm-2 2h10v1H3zm-1 2h12v1H2zm0 2h3v1H2zm9 0h3v1h-3zm-9 2h2v1H2zm10 0h2v1h-2zm-8 2h1v2H4zm7 0h1v2h-1z'/%3E%3C/svg%3E">
 
-  <!-- External manifest.json with inline fallback for preview -->
-  <link rel="manifest" id="manifest-link" href="manifest.json">
+  <!-- External manifest.json -->
+  <link rel="manifest" href="manifest.json">
 
   <!-- Retro Pixel Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -93,7 +93,7 @@
       inset: 0;
       pointer-events: none;
       background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%),
-                  linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 255, 0, 0.03));
       background-size: 100% 4px, 6px 100%;
       z-index: 5;
     }
@@ -135,7 +135,7 @@
       color: #38bdf8;
     }
 
-    /* Bottom Control & Sensor Feedback Bar */
+    /* Bottom Control & Lives Display */
     .bottom-hud {
       position: absolute;
       bottom: 0;
@@ -149,49 +149,6 @@
       font-size: 8px;
       z-index: 10;
       pointer-events: none;
-    }
-
-    .indicator-pill {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #cbd5e1;
-    }
-
-    .indicator-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #ef4444;
-      transition: background 0.2s, box-shadow 0.2s;
-    }
-
-    .indicator-dot.active {
-      background: #22c55e;
-      box-shadow: 0 0 8px #22c55e;
-    }
-
-    .pinch-badge {
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 8px;
-      font-weight: 700;
-      background: rgba(255, 255, 255, 0.05);
-      color: #64748b;
-      border: 1px solid transparent;
-      transition: all 0.1s ease;
-    }
-
-    .pinch-badge.firing {
-      background: #f43f5e;
-      color: #ffffff;
-      border-color: #fda4af;
-      box-shadow: 0 0 12px #f43f5e;
-      transform: scale(1.08);
     }
 
     /* Start Screen / Game Over Overlay Screens */
@@ -208,7 +165,7 @@
       justify-content: center;
       padding: 24px;
       text-align: center;
-      gap: 20px;
+      gap: 18px;
     }
 
     .overlay-screen.hidden {
@@ -220,7 +177,7 @@
       color: #22c55e;
       text-shadow: 0 0 12px #22c55e;
       line-height: 1.4;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .score-table {
@@ -229,7 +186,7 @@
       color: #cbd5e1;
       text-align: left;
       background: rgba(255, 255, 255, 0.04);
-      padding: 14px 18px;
+      padding: 12px 16px;
       border: 1px dashed rgba(255, 255, 255, 0.2);
       border-radius: 8px;
       width: 100%;
@@ -266,7 +223,7 @@
       box-shadow: 0 6px 0 #15803d, 0 0 20px rgba(34, 197, 94, 0.5);
       transition: transform 0.1s, box-shadow 0.1s;
       animation: buttonPulse 1.8s infinite;
-      margin-top: 10px;
+      margin-top: 8px;
       touch-action: manipulation;
     }
 
@@ -353,11 +310,9 @@
       </div>
     </div>
 
-    <!-- Bottom HUD (Pure Arcade Lives Display) -->
+    <!-- Bottom HUD (Arcade Lives Display) -->
     <div class="bottom-hud">
-      <div id="lives-display" style="display: flex; gap: 6px; align-items: center;">
-        <!-- Player lives rendered here -->
-      </div>
+      <div id="lives-display" style="display: flex; gap: 6px; align-items: center;"></div>
     </div>
 
     <!-- Start Screen Overlay -->
@@ -382,8 +337,8 @@
         ▶ JÁTÉK INDÍTÁSA
       </button>
 
-      <!-- PWA Install Prompt Button (Shown when eligible on mobile) -->
-      <button class="btn-arcade" id="btn-install-pwa" style="display: none; background: #38bdf8; box-shadow: 0 6px 0 #0284c7, 0 0 15px rgba(56, 189, 248, 0.4); font-size: 10px; padding: 12px 18px; margin-top: -6px;">
+      <!-- PWA Install Prompt Button (Shown exclusively on mobile phones) -->
+      <button class="btn-arcade" id="btn-install-pwa" style="display: none; background: #38bdf8; box-shadow: 0 6px 0 #0284c7, 0 0 15px rgba(56, 189, 248, 0.4); font-size: 10px; padding: 12px 18px; margin-top: -4px;">
         📲 ALKALMAZÁS TELEPÍTÉSE
       </button>
     </div>
@@ -415,11 +370,10 @@
           }
         }
         if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume();
+          this.ctx.resume().catch(() => {});
         }
       }
 
-      // Classic laser pew sound
       playShoot() {
         if (!this.ctx) return;
         try {
@@ -442,7 +396,6 @@
         } catch (e) {}
       }
 
-      // Invader explosion sound
       playExplosion() {
         if (!this.ctx) return;
         try {
@@ -473,7 +426,6 @@
         } catch (e) {}
       }
 
-      // Invader march beat (Space Invaders iconic 4-step heartbeat)
       playMarch(step) {
         if (!this.ctx) return;
         try {
@@ -497,7 +449,6 @@
         } catch (e) {}
       }
 
-      // UFO saucer warble sound
       playUFO() {
         if (!this.ctx) return;
         try {
@@ -553,15 +504,13 @@
     let marchTimer = 0;
     let marchStep = 0;
     let ufoSpawnTimer = 0;
-    let waveClearTimer = 0;
 
     // AI and Gesture Tracker State
     let isWebcamReady = false;
     let handsDetector = null;
     let handDetected = false;
-    let rawNormalizedX = 0.5; // Mirrored index finger X position
+    let rawNormalizedX = 0.5;
     let isPinching = false;
-    let lastPinchState = false;
     let lastShootTime = 0;
 
     // Entities
@@ -574,18 +523,18 @@
       invulnerableTimer: 0
     };
 
-    let playerLaser = null; // { x, y, vy, width, height }
-    let invaderBombs = []; // [{ x, y, vy, width, height }]
-    let invaders = [];     // [{ x, y, row, col, type, alive, frame, points }]
-    let bunkers = [];      // [{ x, y, width, height, pixels: [][] }]
-    let ufo = null;         // { x, y, vx, points, alive }
-    let particles = [];    // Visual explosion bits
+    let playerLaser = null;
+    let invaderBombs = [];
+    let invaders = [];
+    let bunkers = [];
+    let ufo = null;
+    let particles = [];
 
     let invaderVelocity = { x: 1, y: 0 };
     let invaderMoveTimer = 0;
-    let invaderMoveInterval = 55; // Frames between invader steps, drops as they die
+    let invaderMoveInterval = 55;
 
-    // Offscreen Sprite & Bunker caches to replace thousands of costly fillRect / shadowBlur calls
+    // Offscreen Sprite & Bunker caches
     const SPRITE_CACHE = {};
     let isSpritesCached = false;
 
@@ -605,14 +554,13 @@
       return isMobilePhone() && window.innerHeight >= window.innerWidth;
     }
 
-    // Dynamic offscreen canvas for neural network inference (compact on phones, full precision on PC/tablet)
+    // Dynamic offscreen canvas for neural network inference
     const aiCanvas = document.createElement('canvas');
     const aiCtx = aiCanvas.getContext('2d', { willReadFrequently: true });
     let lastInferenceTime = 0;
 
     // 1-bit pixel maps (8x8 and 11x8)
     const SPRITES = {
-      // Squid (Top row, 30pts)
       squid: [
         [
           "00011000",
@@ -635,7 +583,6 @@
           "01000010"
         ]
       ],
-      // Crab (Middle rows, 20pts)
       crab: [
         [
           "00100000100",
@@ -658,7 +605,6 @@
           "01000000010"
         ]
       ],
-      // Octopus (Bottom row, 10pts)
       octopus: [
         [
           "000011110000",
@@ -681,7 +627,6 @@
           "001100001100"
         ]
       ],
-      // Player spaceship
       player: [
         "00000100000",
         "00001110000",
@@ -692,7 +637,6 @@
         "11111111111",
         "11111111111"
       ],
-      // Mystery UFO (Flying saucer)
       ufo: [
         "00001111110000",
         "00111111111100",
@@ -743,7 +687,6 @@
       bunkers = [];
       const bunkerCount = 3;
       const bWidth = 52;
-      const bHeight = 36;
       const spacing = W / (bunkerCount + 1);
 
       for (let i = 0; i < bunkerCount; i++) {
@@ -755,7 +698,6 @@
         const blockSize = 4.2;
         const grid = [];
 
-        // Offscreen bunker canvas for instant single-draw blitting
         const bCanvas = document.createElement('canvas');
         bCanvas.width = Math.ceil(cols * blockSize);
         bCanvas.height = Math.ceil(rows * blockSize);
@@ -792,23 +734,22 @@
       const spacingX = 40;
       const spacingY = 32;
       const startX = (W - (cols - 1) * spacingX) / 2;
-      // Start slightly lower each wave, up to a limit
       const startY = Math.min(85 + (waveNum - 1) * 16, 170);
 
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           let type = 'octopus';
           let points = 10;
-          let color = '#22c55e'; // Green
+          let color = '#22c55e';
 
           if (r === 0) {
             type = 'squid';
             points = 30;
-            color = '#ec4899'; // Pink
+            color = '#ec4899';
           } else if (r === 1 || r === 2) {
             type = 'crab';
             points = 20;
-            color = '#38bdf8'; // Blue
+            color = '#38bdf8';
           }
 
           invaders.push({
@@ -826,7 +767,6 @@
       }
 
       invaderVelocity = { x: 1, y: 0 };
-      // Base speed gets faster on higher waves
       invaderMoveInterval = Math.max(16, 50 - (waveNum - 1) * 7);
       invaderMoveTimer = 0;
       marchStep = 0;
@@ -851,6 +791,10 @@
 
     function initMediaPipe() {
       if (handsDetector) return;
+      if (typeof Hands === 'undefined') {
+        console.warn("MediaPipe Hands library not loaded yet.");
+        return;
+      }
 
       const isPhone = isMobilePhone();
       try {
@@ -860,9 +804,9 @@
 
         handsDetector.setOptions({
           maxNumHands: 1,
-          modelComplexity: isPhone ? 0 : 1, // Phone: 0 (lightweight), PC/Tablet: 1 (sharp precision)
-          minDetectionConfidence: isPhone ? 0.4 : 0.5,
-          minTrackingConfidence: isPhone ? 0.4 : 0.5
+          modelComplexity: isPhone ? 0 : 1,
+          minDetectionConfidence: isPhone ? 0.35 : 0.5,
+          minTrackingConfidence: isPhone ? 0.35 : 0.5
         });
 
         handsDetector.onResults(onHandResults);
@@ -880,27 +824,20 @@
       handDetected = true;
       const landmarks = results.multiHandLandmarks[0];
 
-      // Landmark 8 = Index Fingertip, Landmark 4 = Thumb Tip
       const indexTip = landmarks[8];
       const thumbTip = landmarks[4];
 
-      // Mirrored horizontal position: moving hand right moves ship right
       rawNormalizedX = 1.0 - indexTip.x;
 
-      // Pinch distance check (slightly wider threshold for 11 FPS capture window)
       const pinchDist = Math.hypot(indexTip.x - thumbTip.x, indexTip.y - thumbTip.y);
-      isPinching = pinchDist < 0.072;
+      isPinching = pinchDist < 0.075;
 
       if (isPinching) {
         triggerFire();
       }
-
-      lastPinchState = isPinching;
     }
 
     async function startCamera() {
-      soundFX.init();
-
       initMediaPipe();
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -908,22 +845,14 @@
       }
 
       const isPhone = isMobilePhone();
-
-      // Configure AI canvas resolution: smaller on mobile phones, sharper on PC/tablet
       aiCanvas.width = isPhone ? 110 : 320;
       aiCanvas.height = isPhone ? 85 : 240;
 
-      // Camera constraints: battery-saving on phones, high-fps on PC and tablets
-      const videoConstraints = isPhone ? {
+      // Relaxed camera constraints to avoid OverconstrainedError on Android/iOS
+      const videoConstraints = {
         facingMode: 'user',
-        width: { ideal: 240, max: 320 },
-        height: { ideal: 180, max: 240 },
-        frameRate: { ideal: 20, max: 30 }
-      } : {
-        facingMode: 'user',
-        width: { ideal: 640, max: 1280 },
-        height: { ideal: 480, max: 720 },
-        frameRate: { ideal: 30, max: 60 }
+        width: { ideal: isPhone ? 320 : 640 },
+        height: { ideal: isPhone ? 240 : 480 }
       };
 
       try {
@@ -935,22 +864,22 @@
         video.srcObject = stream;
         video.muted = true;
         video.playsInline = true;
-        await video.play();
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        video.setAttribute('muted', '');
+
+        await video.play().catch(e => console.warn("Video play notice:", e));
 
         isWebcamReady = true;
-
-        // Start processing video frames
         requestAnimationFrame(predictVideoLoop);
       } catch (err) {
-        console.warn("Camera access denied or busy:", err);
+        console.warn("Camera access denied or busy, touch control remains active:", err);
       }
     }
 
     let isProcessingFrame = false;
     async function predictVideoLoop() {
       const now = performance.now();
-      // Mobile phones throttle to ~11 FPS (90ms) to save CPU & avoid heat.
-      // PC & Tablets run unthrottled (16ms / every frame) for instantaneous 60 FPS hand tracking!
       const minInterval = isMobilePhone() ? 90 : 16;
 
       if (
@@ -981,8 +910,7 @@
       if (currentState !== GAME_STATE.PLAYING) return;
 
       const now = performance.now();
-      // Rate limiter: maximum 1 shot per 260ms (and only 1 active laser at a time like classic arcade)
-      if (!playerLaser && now - lastShootTime > 260) {
+      if (!playerLaser && now - lastShootTime > 250) {
         lastShootTime = now;
         playerLaser = {
           x: player.x,
@@ -1001,24 +929,20 @@
         const bx = bunker.x;
         const by = bunker.y;
 
-        // Bounding box pre-check
         if (
           bullet.x >= bx &&
           bullet.x <= bx + bunker.cols * bunker.blockSize &&
           bullet.y >= by &&
           bullet.y <= by + bunker.rows * bunker.blockSize
         ) {
-          // Find which cell was hit
           const c = Math.floor((bullet.x - bx) / bunker.blockSize);
           const r = Math.floor((bullet.y - by) / bunker.blockSize);
 
           if (r >= 0 && r < bunker.rows && c >= 0 && c < bunker.cols) {
             if (bunker.grid[r][c]) {
-              // Destroy hit block and neighbors for realistic chip damage
               const eraseBlock = (row, col) => {
                 if (row >= 0 && row < bunker.rows && col >= 0 && col < bunker.cols && bunker.grid[row][col]) {
                   bunker.grid[row][col] = false;
-                  // Erase directly on the bunker offscreen canvas
                   bunker.ctx.clearRect(col * bunker.blockSize - 0.5, row * bunker.blockSize - 0.5, bunker.blockSize + 1, bunker.blockSize + 1);
                 }
               };
@@ -1030,7 +954,7 @@
               eraseBlock(r, c + 1);
 
               spawnParticles(bullet.x, bullet.y, '#22c55e', 4);
-              return true; // Hit registered
+              return true;
             }
           }
         }
@@ -1041,15 +965,12 @@
     function updateGame() {
       if (currentState !== GAME_STATE.PLAYING) return;
 
-      // 1. Smoothly map player position from detected index finger X
-      // Phones use 0.16 lerp to smooth the 90ms intervals; PC/tablet uses 0.35 for instant real-time response
       if (handDetected) {
         const targetX = rawNormalizedX * W;
         const lerpFactor = isMobilePhone() ? 0.16 : 0.35;
         player.x += (targetX - player.x) * lerpFactor;
       }
 
-      // Keep ship on screen
       const halfW = player.width / 2;
       player.x = Math.max(halfW + 10, Math.min(W - halfW - 10, player.x));
 
@@ -1057,12 +978,9 @@
       if (playerLaser) {
         playerLaser.y += playerLaser.vy;
 
-        // Check bunker collision
         if (checkBunkerCollision(playerLaser, true)) {
           playerLaser = null;
-        }
-        // Check UFO collision
-        else if (ufo && ufo.alive &&
+        } else if (ufo && ufo.alive &&
           Math.abs(playerLaser.x - ufo.x) < 20 &&
           Math.abs(playerLaser.y - ufo.y) < 14
         ) {
@@ -1072,10 +990,7 @@
           ufo = null;
           playerLaser = null;
           updateHUD();
-        }
-        // Check Invaders collision
-        else if (playerLaser) {
-          let hitInvader = false;
+        } else if (playerLaser) {
           for (let i = 0; i < invaders.length; i++) {
             const inv = invaders[i];
             if (!inv.alive) continue;
@@ -1089,14 +1004,12 @@
               playerLaser.y <= inv.y + hitBoxH / 2
             ) {
               inv.alive = false;
-              hitInvader = true;
               score += inv.points;
               spawnParticles(inv.x, inv.y, inv.color, 12);
               soundFX.playExplosion();
               playerLaser = null;
               updateHUD();
 
-              // Speed up remaining fleet
               const aliveCount = invaders.filter(v => v.alive).length;
               if (aliveCount > 0) {
                 invaderMoveInterval = Math.max(6, Math.floor(45 * (aliveCount / invaders.length)));
@@ -1105,7 +1018,6 @@
             }
           }
 
-          // Off-screen laser cleanup
           if (playerLaser && playerLaser.y < 30) {
             playerLaser = null;
           }
@@ -1120,13 +1032,11 @@
         let hitWall = false;
         const aliveInvaders = invaders.filter(v => v.alive);
 
-        // Check victory / stage clear
         if (aliveInvaders.length === 0) {
           advanceWave();
           return;
         }
 
-        // Check if any invader hits wall
         for (let i = 0; i < aliveInvaders.length; i++) {
           const nextX = aliveInvaders[i].x + invaderVelocity.x * 12;
           if (nextX < 24 || nextX > W - 24) {
@@ -1136,7 +1046,6 @@
         }
 
         if (hitWall) {
-          // Drop down and reverse direction
           invaderVelocity.x = -invaderVelocity.x;
           aliveInvaders.forEach(inv => {
             inv.y += 14;
@@ -1149,10 +1058,8 @@
           });
         }
 
-        // Heartbeat march sound
         soundFX.playMarch(marchStep++);
 
-        // Invaders invasion reached bunker/player level: Game Over
         for (let i = 0; i < aliveInvaders.length; i++) {
           if (aliveInvaders[i].y >= player.y - 10) {
             triggerGameOver(false);
@@ -1181,13 +1088,11 @@
         const bomb = invaderBombs[i];
         bomb.y += bomb.vy;
 
-        // Check bunker collision
         if (checkBunkerCollision(bomb, false)) {
           invaderBombs.splice(i, 1);
           continue;
         }
 
-        // Check player collision
         if (
           player.invulnerableTimer <= 0 &&
           Math.abs(bomb.x - player.x) < player.width / 2 &&
@@ -1198,7 +1103,7 @@
           soundFX.playExplosion();
           lives--;
           renderLives();
-          player.invulnerableTimer = 60; // 1 second invulnerability
+          player.invulnerableTimer = 60;
 
           if (lives <= 0) {
             triggerGameOver(false);
@@ -1207,7 +1112,6 @@
           continue;
         }
 
-        // Off screen cleanup
         if (bomb.y > H + 10) {
           invaderBombs.splice(i, 1);
         }
@@ -1254,7 +1158,7 @@
     function advanceWave() {
       currentState = GAME_STATE.STAGE_CLEAR;
       currentWave++;
-      score += 500; // Bonus points for wave clear
+      score += 500;
       updateHUD();
 
       setTimeout(() => {
@@ -1293,11 +1197,9 @@
     }
 
     function drawGame() {
-      // Clear black CRT background
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, W, H);
 
-      // Starfield background
       ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
       for (let s = 0; s < 25; s++) {
         const sx = (s * 47) % W;
@@ -1305,12 +1207,10 @@
         ctx.fillRect(sx, sy, 1.5, 1.5);
       }
 
-      // Draw Mystery UFO via cached bitmap
       if (ufo && ufo.alive && SPRITE_CACHE.ufo) {
         ctx.drawImage(SPRITE_CACHE.ufo, ufo.x - 21, ufo.y - 10);
       }
 
-      // Draw Invaders via pre-rendered bitmaps (1 blit per invader instead of hundreds of fillRects)
       invaders.forEach(inv => {
         if (!inv.alive) return;
         const cached = SPRITE_CACHE[inv.type];
@@ -1320,19 +1220,16 @@
         }
       });
 
-      // Draw Bunkers via pre-baked offscreen canvas (only 3 fast drawImage calls per frame!)
       bunkers.forEach(b => {
         ctx.drawImage(b.canvas, b.x, b.y);
       });
 
-      // Draw Player Ship (flashes if invulnerable)
       if (player.invulnerableTimer === 0 || Math.floor(player.invulnerableTimer / 4) % 2 === 0) {
         if (SPRITE_CACHE.player) {
           ctx.drawImage(SPRITE_CACHE.player, player.x - SPRITE_CACHE.player.width / 2, player.y - SPRITE_CACHE.player.height / 2);
         }
       }
 
-      // Draw Player Laser (Crisp high-contrast neon without costly GPU shadowBlur)
       if (playerLaser) {
         ctx.fillStyle = '#38bdf8';
         ctx.fillRect(playerLaser.x - 2, playerLaser.y, 4, playerLaser.height);
@@ -1340,13 +1237,11 @@
         ctx.fillRect(playerLaser.x - 1, playerLaser.y + 1, 2, playerLaser.height - 2);
       }
 
-      // Draw Invader Bombs
       ctx.fillStyle = '#f43f5e';
       invaderBombs.forEach(b => {
         ctx.fillRect(b.x - b.width / 2, b.y, b.width, b.height);
       });
 
-      // Draw Particles
       particles.forEach(p => {
         ctx.fillStyle = p.color;
         ctx.globalAlpha = Math.max(0, p.life);
@@ -1354,7 +1249,6 @@
       });
       ctx.globalAlpha = 1.0;
 
-      // Wave cleared announcement
       if (currentState === GAME_STATE.STAGE_CLEAR) {
         ctx.fillStyle = '#38bdf8';
         ctx.font = '16px "Press Start 2P", monospace';
@@ -1382,7 +1276,6 @@
       }
     }
 
-    // Intelligent device detector: Only phones are locked to portrait
     function checkPhoneLandscape() {
       const isPhone = isMobilePhone();
       const isLandscape = window.innerWidth > window.innerHeight;
@@ -1421,7 +1314,7 @@
       });
     }
 
-    // Touch & Mouse fallback so player can also drag on mobile or desktop
+    // Touch & Pointer controls
     let isTouching = false;
     canvas.addEventListener('pointerdown', (e) => {
       isTouching = true;
@@ -1441,30 +1334,31 @@
       isTouching = false;
     });
 
-    // Request full screen: STRICTLY on portrait mobile phones, NEVER on PC or tablets!
     function enterFullScreen() {
-      if (!isPortraitPhone()) return;
+      try {
+        if (!isPortraitPhone()) return;
 
-      const docEl = document.documentElement;
-      if (docEl.requestFullscreen) {
-        docEl.requestFullscreen().catch(() => {});
-      } else if (docEl.webkitRequestFullscreen) {
-        docEl.webkitRequestFullscreen();
+        const docEl = document.documentElement;
+        if (docEl.requestFullscreen) {
+          docEl.requestFullscreen().catch(() => {});
+        } else if (docEl.webkitRequestFullscreen) {
+          try { docEl.webkitRequestFullscreen(); } catch (e) {}
+        }
+      } catch (e) {
+        console.warn('Fullscreen request non-fatal error:', e);
       }
     }
 
-    // PWA Install Prompt Support: Strictly only on mobile phones!
+    // PWA Install Prompt Support: Strictly only on mobile phones
     let deferredPrompt = null;
     const btnInstallPwa = document.getElementById('btn-install-pwa');
 
     function checkPWAButtonVisibility() {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
       if (btnInstallPwa) {
-        // Hide unconditionally on desktop PC and tablets
         if (!isMobilePhone() || isStandalone) {
           btnInstallPwa.style.display = 'none';
         } else if (/iPhone|iPod/.test(navigator.userAgent) && !deferredPrompt) {
-          // On iOS phones, show helpful add-to-homescreen guidance
           btnInstallPwa.style.display = 'block';
         }
       }
@@ -1474,7 +1368,6 @@
       e.preventDefault();
       deferredPrompt = e;
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-      // Show ONLY if the user is on a mobile phone and not already installed
       if (btnInstallPwa && isMobilePhone() && !isStandalone) {
         btnInstallPwa.style.display = 'block';
       }
@@ -1489,14 +1382,16 @@
             btnInstallPwa.style.display = 'none';
           }
           deferredPrompt = null;
+        }
+      });
+    }
+
     // Register sw.js for installed PWA caching with automatic update polling
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then((registration) => {
-        // Azonnal ellenőrzi a szervert, érkezett-e új verzió
-        registration.update();
+        registration.update().catch(() => {});
       }).catch(() => {});
 
-      // Amint egy új sw.js aktiválódik a szerveren, automatikusan újratölti az oldalt
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) {
@@ -1506,13 +1401,15 @@
       });
     }
 
-    document.getElementById('btn-start-game').addEventListener('click', async () => {
+    // Universal Start/Restart Function (Instant, Non-blocking, and Protected)
+    function startGameSession() {
       enterFullScreen();
       startOverlay.classList.add('hidden');
-      soundFX.init();
-      await startCamera();
+      gameoverOverlay.classList.add('hidden');
 
-      // Reset and start
+      soundFX.init();
+
+      // Reset and initialize game parameters immediately
       score = 0;
       currentWave = 1;
       lives = 3;
@@ -1522,20 +1419,13 @@
       initBunkers();
       initInvaderWave(currentWave);
       currentState = GAME_STATE.PLAYING;
-    });
 
-    document.getElementById('btn-restart-game').addEventListener('click', () => {
-      enterFullScreen();
-      gameoverOverlay.classList.add('hidden');
-      score = 0;
-      currentWave = 1;
-      lives = 3;
-      renderLives();
-      updateHUD();
-      initBunkers();
-      initInvaderWave(currentWave);
-      currentState = GAME_STATE.PLAYING;
-    });
+      // Start camera asynchronously without hanging the game
+      startCamera().catch(err => console.warn("Camera start notice:", err));
+    }
+
+    document.getElementById('btn-start-game').addEventListener('click', startGameSession);
+    document.getElementById('btn-restart-game').addEventListener('click', startGameSession);
 
     window.addEventListener('DOMContentLoaded', () => {
       checkPhoneLandscape();
