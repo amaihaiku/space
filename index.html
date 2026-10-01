@@ -16,8 +16,8 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' width='192' height='192'%3E%3Crect width='16' height='16' fill='%23030712'/%3E%3Cpath fill='%2322c55e' d='M5 2h6v1H5zm-2 2h10v1H3zm-1 2h12v1H2zm0 2h3v1H2zm9 0h3v1h-3zm-9 2h2v1H2zm10 0h2v1h-2zm-8 2h1v2H4zm7 0h1v2h-1z'/%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' width='192' height='192'%3E%3Crect width='16' height='16' fill='%23030712'/%3E%3Cpath fill='%2322c55e' d='M5 2h6v1H5zm-2 2h10v1H3zm-1 2h12v1H2zm0 2h3v1H2zm9 0h3v1h-3zm-9 2h2v1H2zm10 0h2v1h-2zm-8 2h1v2H4zm7 0h1v2h-1z'/%3E%3C/svg%3E">
 
-  <!-- Inline Web App Manifest with Icon for PWA Installation -->
-  <link rel="manifest" href='data:application/manifest+json,{"name":"Space Invaders Hand AI","short_name":"InvadersAI","start_url":".","display":"standalone","orientation":"portrait","background_color":"#030712","theme_color":"#030712","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 fill=%22%23030712%22/%3E%3Cpath fill=%22%2322c55e%22 d=%22M5 2h6v1H5zm-2 2h10v1H3zm-1 2h12v1H2zm0 2h3v1H2zm9 0h3v1h-3zm-9 2h2v1H2zm10 0h2v1h-2zm-8 2h1v2H4zm7 0h1v2h-1z%22/%3E%3C/svg%3E","sizes":"192x192 512x512","type":"image/svg+xml","purpose":"any maskable"}]}'>
+  <!-- External manifest.json with inline fallback for preview -->
+  <link rel="manifest" id="manifest-link" href="manifest.json">
 
   <!-- Retro Pixel Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -377,7 +377,7 @@
         ▶ JÁTÉK INDÍTÁSA
       </button>
 
-      <!-- PWA Install Prompt Button (Shown when eligible) -->
+      <!-- PWA Install Prompt Button (Shown when eligible on mobile) -->
       <button class="btn-arcade" id="btn-install-pwa" style="display: none; background: #38bdf8; box-shadow: 0 6px 0 #0284c7, 0 0 15px rgba(56, 189, 248, 0.4); font-size: 10px; padding: 12px 18px; margin-top: -6px;">
         📲 ALKALMAZÁS TELEPÍTÉSE
       </button>
@@ -584,13 +584,14 @@
     const SPRITE_CACHE = {};
     let isSpritesCached = false;
 
-    // Lightweight 160x120 downscaled canvas for superfast mobile neural network inference
+    // Ultra-lightweight 110x85 downscaled canvas for mobile neural network inference
     const aiCanvas = document.createElement('canvas');
-    aiCanvas.width = 160;
-    aiCanvas.height = 120;
+    aiCanvas.width = 110;
+    aiCanvas.height = 85;
     const aiCtx = aiCanvas.getContext('2d', { willReadFrequently: true });
     let lastInferenceTime = 0;
-    const INFERENCE_MIN_INTERVAL = 38; // ~26 FPS hand inference keeps mobile CPU cool while game runs at 60 FPS!
+    // ~11 FPS hand inference (90ms interval): leaves 85% of mobile CPU free for 60 FPS fluid rendering!
+    const INFERENCE_MIN_INTERVAL = 90;
 
     // 1-bit pixel maps (8x8 and 11x8)
     const SPRITES = {
@@ -840,10 +841,10 @@
         });
 
         handsDetector.setOptions({
-          maxNumHands: 1, // Only need 1 hand for maximum mobile frame rate
-          modelComplexity: 0, // 0 = Fast Mobile model (super snappy 60fps)
-          minDetectionConfidence: 0.5,
-          minTrackingConfidence: 0.5
+          maxNumHands: 1, // Only 1 hand for minimal mobile overhead
+          modelComplexity: 0, // 0 = Lightest mobile neural weights
+          minDetectionConfidence: 0.4, // Lower threshold avoids redundant recalculations
+          minTrackingConfidence: 0.4
         });
 
         handsDetector.onResults(onHandResults);
@@ -861,19 +862,16 @@
       handDetected = true;
       const landmarks = results.multiHandLandmarks[0];
 
-      // Landmark 8 = Index Fingertip
-      // Landmark 4 = Thumb Tip
+      // Landmark 8 = Index Fingertip, Landmark 4 = Thumb Tip
       const indexTip = landmarks[8];
       const thumbTip = landmarks[4];
 
       // Mirrored horizontal position: moving hand right moves ship right
       rawNormalizedX = 1.0 - indexTip.x;
 
-      // Calculate Euclidean distance in normalized coordinate space
+      // Pinch distance check (slightly wider threshold for 11 FPS capture window)
       const pinchDist = Math.hypot(indexTip.x - thumbTip.x, indexTip.y - thumbTip.y);
-
-      // Pinch threshold: when tips are close together (< 0.062)
-      isPinching = pinchDist < 0.062;
+      isPinching = pinchDist < 0.072;
 
       if (isPinching) {
         triggerFire();
@@ -894,9 +892,10 @@
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: 'user', // Front selfie camera for mobile!
-            width: { ideal: 320 },
-            height: { ideal: 240 }
+            facingMode: 'user', // Front selfie camera
+            width: { ideal: 240, max: 320 },
+            height: { ideal: 180, max: 240 },
+            frameRate: { ideal: 20, max: 30 }
           },
           audio: false
         });
@@ -1009,10 +1008,10 @@
       if (currentState !== GAME_STATE.PLAYING) return;
 
       // 1. Smoothly map player position from detected index finger X
+      // 0.16 lerp factor creates buttery smooth sliding motion between the 90ms AI samples
       if (handDetected) {
         const targetX = rawNormalizedX * W;
-        // Smooth lerp interpolation for buttery responsive movement
-        player.x += (targetX - player.x) * 0.28;
+        player.x += (targetX - player.x) * 0.16;
       }
 
       // Keep ship on screen
@@ -1447,17 +1446,9 @@
       });
     }
 
-    // Inline Service Worker Registration for PWA Installability criteria
+    // Register sw.js for installed PWA caching
     if ('serviceWorker' in navigator) {
-      const swScript = `
-        self.addEventListener('install', (e) => self.skipWaiting());
-        self.addEventListener('activate', (e) => self.clients.claim());
-        self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
-      `;
-      try {
-        const swBlob = new Blob([swScript], { type: 'application/javascript' });
-        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
-      } catch (e) {}
+      navigator.serviceWorker.register('sw.js').catch(() => {});
     }
 
     document.getElementById('btn-start-game').addEventListener('click', async () => {
